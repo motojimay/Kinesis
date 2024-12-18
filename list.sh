@@ -19,14 +19,16 @@ for SHARD_ID in $SHARDS; do
 
   # Step 2.2: Iterate through records
   while [ "$SHARD_ITERATOR" != "null" ]; do
-    RESPONSE=$(aws kinesis get-records --shard-iterator $SHARD_ITERATOR --query "{Records: Records[*].SequenceNumber, NextShardIterator: NextShardIterator}" --output json)
-    SEQUENCE_NUMBERS=$(echo $RESPONSE | jq -r '.Records[]')
-    SHARD_ITERATOR=$(echo $RESPONSE | jq -r '.NextShardIterator')
+    # Get records from the current ShardIterator
+    RESPONSE=$(aws kinesis get-records --shard-iterator $SHARD_ITERATOR --output json)
 
-    # Print Sequence Numbers
-    for SEQ in $SEQUENCE_NUMBERS; do
-      echo "SequenceNumber: $SEQ"
-    done
+    # Extract SequenceNumber and Data
+    SEQUENCE_NUMBERS=$(echo "$RESPONSE" | jq -r '.Records[] | {SequenceNumber: .SequenceNumber, Data: .Data}')
+    SHARD_ITERATOR=$(echo "$RESPONSE" | jq -r '.NextShardIterator')
+
+    # Print Sequence Numbers and Data
+    echo "Records from Shard $SHARD_ID:"
+    echo "$SEQUENCE_NUMBERS" | jq '.'
 
     # Optional: Sleep to avoid exceeding the Kinesis API rate limit
     sleep 1
